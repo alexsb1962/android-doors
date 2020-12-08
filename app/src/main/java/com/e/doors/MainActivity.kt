@@ -88,12 +88,6 @@ class MainActivity : AppCompatActivity() {
         var stopWork = false
         var n:Long = 0
  
-        private val vsp = View(context) // ради одного метода
-        val btn = vsp.findViewById<Button>(R.id.startBtn)
-        val t1  = vsp.findViewById<TextView>(R.id.textView1)
-        val t2  = vsp.findViewById<TextView>(R.id.textView2)
-        val t3  = vsp.findViewById<TextView>(R.id.textView3)
-        val t4  = vsp.findViewById<TextView>(R.id.textView4)
 
         init {
             n=0
@@ -197,7 +191,7 @@ class MainActivity : AppCompatActivity() {
             startBtn.setBackgroundColor(Color.RED)
             if (canVibrate) vibrator.vibrate(milliseconds)
             // пробуем запретить на 500мс
-            //
+            // с блокировкой потока
             TimeUnit.MILLISECONDS.sleep(500)
             startBtn.isEnabled = true
             startBtn.setBackgroundColor(Color.GREEN)

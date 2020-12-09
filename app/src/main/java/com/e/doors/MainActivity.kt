@@ -76,10 +76,12 @@ class MainActivity : AppCompatActivity() {
             finish();
         }
         System.exit(0);
+
+        super.onStop()
     }
 
     //
-    class WifiTimerTask (val context: Context ):  Runnable{
+    inner class WifiTimerTask (val context: Context ):  Runnable{
 
         var udpRequestSocket = DatagramSocket(udpRequestPort)
         var udpReplaySocket  = DatagramSocket(udpReplayPort)
@@ -119,12 +121,13 @@ class MainActivity : AppCompatActivity() {
             handler.postDelayed(this, wifiTimerInterval ) // запланировал сл.запуск
             n++
             var ssid=getNetName()
-            t2.text = ssid
-            t3.text = n.toString()
+
+            txt2.text = ssid
+            txt3.text = n.toString()
             if (ssid != targetNetName) {
-                    btn.isEnabled = false
-                    btn.setBackgroundColor(Color.GRAY)
-                    btn.text = "No Net"
+                    startBtn.isEnabled = false
+                    startBtn.setBackgroundColor(Color.GRAY)
+                    startBtn.text = "No Net"
             } else {
                 stringToUdp("IsSomebodyHere", getBroadcastAddress() )
                 //ждем ответ ограниченное время !!!!!!!!!!
@@ -133,14 +136,14 @@ class MainActivity : AppCompatActivity() {
                     udpReplaySocket.receive(udpReceivePacket)
                     deviceIp = udpReceivePacket.getAddress()
                     deviceName = udpReceivePacket.getData().toString()
-                        t4.text = deviceIp.toString()
-                        btn.isEnabled = true
-                        btn.setBackgroundColor(Color.GREEN)
-                        btn.text = "Connected"
+                        txt4.text = deviceIp.toString()
+                        startBtn.isEnabled = true
+                        startBtn.setBackgroundColor(Color.GREEN)
+                        startBtn.text = "Connected"
                 }
                 catch (e: SocketTimeoutException) {
-                        btn.text = "No device"
-                        btn.setBackgroundColor(Color.GRAY)
+                        startBtn.text = "No device"
+                        startBtn.setBackgroundColor(Color.GRAY)
                 }
             }
         }
@@ -160,7 +163,7 @@ class MainActivity : AppCompatActivity() {
         txt3 = findViewById(R.id.textView3) as TextView
         txt4 = findViewById(R.id.textView4) as TextView
 
-        wifiTimerTask = MainActivity.WifiTimerTask(this )
+        wifiTimerTask = WifiTimerTask(this)
         val handler = android.os.Handler() // Handler вроде depricated
         wifiTimerTask.handler=handler
 
@@ -199,6 +202,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy(){
+        // todo при выходе - сначала custom затем супер
         super.onDestroy()
     }
 }

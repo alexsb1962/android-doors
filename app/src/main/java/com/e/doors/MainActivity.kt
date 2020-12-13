@@ -30,9 +30,9 @@ import android.os.Handler as Handler1
 //import kotlinx.coroutines.*
 
 
-const val  targetNetName="theflat"
-//val  targetNetName="AndroidWifi"
-const val wifiTimerInterval = 1000.toLong()
+//val  targetNetName="theflat"
+val  targetNetName="AndroidWifi"
+const val wifiTimerInterval = 3000.toLong()
 const val udpReplaySocketTimeout=100
 const val udpRequestPort:Int = 54545
 const val udpReplayPort:Int = 54546
@@ -43,13 +43,8 @@ var udpRequestPacket:DatagramPacket = DatagramPacket(udpRequest, udpRequest.size
 var deviceName = "doors"
 
 fun getBroadcastAddress(): InetAddress {
-    val quads = ByteArray(4)
-    for (k in 0..3)
-        quads[k] = 255.toByte()
-    quads[0] = 192.toByte()
-    quads[1] = 168.toByte()
-    quads[2] = 1.toByte()
-//    quads[3] = 112.toByte()
+    val quads =ByteArray(4)
+    quads[0] = 192.toByte(); quads[1] = 168.toByte(); quads[2] = 1.toByte(); quads[3] = 255.toByte()
     return InetAddress.getByAddress(quads)
 }
 
@@ -63,24 +58,13 @@ class MainActivity : AppCompatActivity() {
     public lateinit var txt4 :TextView
     public lateinit var wifiTimerTask : WifiTimerTask
 
-    override fun onStop() {
-        super.onStop()
-        // остановить  подзадачу таймера
-        wifiTimerTask.close()
-        //
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            finishAndRemoveTask();
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-            finishAffinity();
-        } else {
-            finish();
-        }
-        System.exit(0);
-
-        super.onStop()
+    public fun getNetName():String {
+        var wifiManager = getApplicationContext().getSystemService(Context.WIFI_SERVICE) as WifiManager
+        var wifiInfo = wifiManager.getConnectionInfo() as WifiInfo
+        var netName = wifiInfo.getSSID().replace("\"", "")
+        return netName
     }
 
-    //
     inner class WifiTimerTask (val context: Context ):  Runnable{
 
         var udpRequestSocket = DatagramSocket(udpRequestPort)
@@ -95,13 +79,6 @@ class MainActivity : AppCompatActivity() {
             n=0
             udpReplaySocket.soTimeout = udpReplaySocketTimeout
             udpRequestSocket.setBroadcast(true)
-        }
-
-        public fun getNetName():String {
-            var wifiManager = context.getApplicationContext().getSystemService(Context.WIFI_SERVICE) as WifiManager
-            var wifiInfo = wifiManager.getConnectionInfo() as WifiInfo
-            var netName = wifiInfo.getSSID().replace("\"", "")
-            return netName
         }
 
         public fun stringToUdp(s:String, Addr:InetAddress){
@@ -153,7 +130,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val startBtn = findViewById(R.id.startBtn) as Button
+        startBtn = findViewById(R.id.startBtn) as Button
         startBtn.text = "No connection"
         startBtn.isEnabled = false
         startBtn.setBackgroundColor(Color.GRAY)
@@ -167,7 +144,7 @@ class MainActivity : AppCompatActivity() {
         val handler = android.os.Handler() // Handler вроде depricated
         wifiTimerTask.handler=handler
 
-        var netName = wifiTimerTask.getNetName()
+        var netName = getNetName()
         txt1.text = netName
         // запускаем мониторинг сети по таймеру
         handler.post(wifiTimerTask)
@@ -201,6 +178,22 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onStop() {
+        super.onStop()
+        // буду убивать приложение с выгрузкой из памяти при малейшем чихе
+        // остановить  подзадачу таймера
+        wifiTimerTask.close()
+        //
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            finishAndRemoveTask();
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+            finishAffinity();
+        } else {
+            finish();
+        }
+        System.exit(0); // не выполняется в текущем варианте
+        super.onStop()
+    }
     override fun onDestroy(){
         // todo при выходе - сначала custom затем супер
         super.onDestroy()

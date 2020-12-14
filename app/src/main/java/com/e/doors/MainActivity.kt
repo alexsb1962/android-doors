@@ -29,7 +29,7 @@ import android.os.Handler as Handler1
 
 //import kotlinx.coroutines.*
 
-//3
+//4
 //val  targetNetName="theflat"
 val  targetNetName="AndroidWifi"
 const val wifiTimerInterval = 3000.toLong()

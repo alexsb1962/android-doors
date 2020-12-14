@@ -29,7 +29,7 @@ import android.os.Handler as Handler1
 
 //import kotlinx.coroutines.*
 
-
+//1
 //val  targetNetName="theflat"
 val  targetNetName="AndroidWifi"
 const val wifiTimerInterval = 3000.toLong()
@@ -66,14 +66,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     inner class WifiTimerTask (val context: Context ):  Runnable{
-
         var udpRequestSocket = DatagramSocket(udpRequestPort)
         var udpReplaySocket  = DatagramSocket(udpReplayPort)
         var deviceIp = getBroadcastAddress()
         var handler = android.os.Handler()
         var stopWork = false
         var n:Long = 0
- 
 
         init {
             n=0

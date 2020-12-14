@@ -32,7 +32,8 @@ import android.os.Handler as Handler1
 //4
 //val  targetNetName="theflat"
 val  targetNetName="AndroidWifi"
-const val wifiTimerInterval = 3000.toLong()
+var wifiTimerIntervalLong = 5000L
+var wifiTimerIntervalShort = 1000L
 const val udpReplaySocketTimeout=100
 const val udpRequestPort:Int = 54545
 const val udpReplayPort:Int = 54546
@@ -93,10 +94,10 @@ class MainActivity : AppCompatActivity() {
 
         override fun run() {
             if(stopWork)  return ;
-            handler.postDelayed(this, wifiTimerInterval ) // запланировал сл.запуск
             n++
+            // запланирую сл.запуск
+            if (startBtn.isEnabled()) handler.postDelayed(this, wifiTimerIntervalShort) else handler.postDelayed(this, wifiTimerIntervalLong)
             var ssid=getNetName()
-
             txt2.text = ssid
             txt3.text = n.toString()
             if (ssid != targetNetName) {
@@ -168,8 +169,7 @@ class MainActivity : AppCompatActivity() {
             startBtn.isEnabled = false
             startBtn.setBackgroundColor(Color.RED)
             if (canVibrate) vibrator.vibrate(milliseconds)
-            // пробуем запретить на 500мс
-            // с блокировкой потока
+            // пробуем запретить на 500мс с блокировкой потока
             TimeUnit.MILLISECONDS.sleep(500)
             startBtn.isEnabled = true
             startBtn.setBackgroundColor(Color.GREEN)

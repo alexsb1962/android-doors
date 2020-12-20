@@ -6,32 +6,22 @@ import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Bundle
-import android.os.Looper
 import android.os.Vibrator
-import android.view.View
 import android.widget.Button
 import android.widget.TextView
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
-import androidx.core.content.ContextCompat.getSystemService
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
-import java.net.InetAddress.getByAddress
 import java.net.SocketTimeoutException
-import java.util.*
 import java.util.concurrent.TimeUnit
-import android.os.Handler as Handler1
 
 //import kotlinx.coroutines.*
 
 //4
-//val  targetNetName="theflat"
-val  targetNetName="AndroidWifi"
+val  targetNetName="theflat"
+//val  targetNetName="AndroidWifi"
 var wifiTimerIntervalLong = 5000L
 var wifiTimerIntervalShort = 1000L
 const val udpReplaySocketTimeout=100
@@ -71,6 +61,7 @@ class MainActivity : AppCompatActivity() {
         var udpReplaySocket  = DatagramSocket(udpReplayPort)
         var deviceIp = getBroadcastAddress()
         var handler = android.os.Handler()
+        var ssid =""
         var stopWork = false
         var n:Long = 0
 
@@ -80,7 +71,7 @@ class MainActivity : AppCompatActivity() {
             udpRequestSocket.setBroadcast(true)
         }
 
-        public fun stringToUdp(s:String, Addr:InetAddress){
+        public fun stringOverUdp(s:String, Addr:InetAddress){
             var udpRequest = s.toByteArray()
             var udpRequestPacket = DatagramPacket(udpRequest, udpRequest.size, Addr, udpRequestPort)
             udpRequestSocket.send(udpRequestPacket)
@@ -96,30 +87,32 @@ class MainActivity : AppCompatActivity() {
             if(stopWork)  return ;
             n++
             // запланирую сл.запуск
-            if (startBtn.isEnabled()) handler.postDelayed(this, wifiTimerIntervalShort) else handler.postDelayed(this, wifiTimerIntervalLong)
-            var ssid=getNetName()
+            if ( startBtn.isEnabled() ) handler.postDelayed(this, wifiTimerIntervalLong) else handler.postDelayed(this, wifiTimerIntervalShort)
+            ssid=getNetName()
             txt2.text = ssid
             txt3.text = n.toString()
             if (ssid != targetNetName) {
-                    startBtn.isEnabled = false
-                    startBtn.setBackgroundColor(Color.GRAY)
-                    startBtn.text = "No Net"
+                startBtn.isEnabled = false
+                startBtn.setBackgroundColor(Color.GRAY)
+                startBtn.text = "No Net"
             } else {
-                stringToUdp("IsSomebodyHere", getBroadcastAddress() )
+                stringOverUdp("IsSomebodyHere", deviceIp )
                 //ждем ответ ограниченное время !!!!!!!!!!
                 try {
                     // пока обслуживаем только одно устройство
                     udpReplaySocket.receive(udpReceivePacket)
                     deviceIp = udpReceivePacket.getAddress()
                     deviceName = udpReceivePacket.getData().toString()
-                        txt4.text = deviceIp.toString()
-                        startBtn.isEnabled = true
-                        startBtn.setBackgroundColor(Color.GREEN)
-                        startBtn.text = "Connected"
+                    txt4.text = deviceIp.toString()
+                    startBtn.isEnabled = true
+                    startBtn.setBackgroundColor(Color.GREEN)
+                    startBtn.text = "Connected"
                 }
                 catch (e: SocketTimeoutException) {
-                        startBtn.text = "No device"
-                        startBtn.setBackgroundColor(Color.GRAY)
+                    startBtn.text = "No device"
+                    startBtn.isEnabled = false
+                    startBtn.setBackgroundColor(Color.GRAY)
+                    deviceIp = getBroadcastAddress()
                 }
             }
         }
@@ -143,29 +136,35 @@ class MainActivity : AppCompatActivity() {
         val handler = android.os.Handler() // Handler вроде depricated
         wifiTimerTask.handler=handler
 
-        var netName = getNetName()
-        txt1.text = netName
+        txt1.text = "--------"
         // запускаем мониторинг сети по таймеру
         handler.post(wifiTimerTask)
-        // wifiTimer.schedule(wifiTimerTask, 10.toLong(), wifiTimerInterval)
 
         val vibrator = getApplicationContext().getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
         val canVibrate: Boolean = vibrator.hasVibrator()
         val milliseconds = 1000L
 
         startBtn.setOnClickListener {
-            // послать команду
-            wifiTimerTask.stringToUdp("press", wifiTimerTask.deviceIp)
-            try{
-                wifiTimerTask.udpReplaySocket.receive(udpReceivePacket)
-            } catch (e: SocketTimeoutException){
-                // no replay from device
-                startBtn.text = "No Replay"
-                startBtn.isEnabled = false
-                startBtn.setBackgroundColor(Color.GRAY)
-                // разрешение произойдет при сл. опросе состояния сети
-            }
+            // послать команду (максимум 3 раза)
+            startBtn.isEnabled = false // во избежание повторного нажатия
 
+            for(  i in 1..3) {
+                wifiTimerTask.stringOverUdp("press", wifiTimerTask.deviceIp)
+                try {
+                    wifiTimerTask.udpReplaySocket.receive(udpReceivePacket)
+                    if (udpReceivePacket.data.toString() == "ok") {
+                        startBtn.isEnabled = true
+                        startBtn.text = wifiTimerTask.ssid
+                        startBtn.setBackgroundColor(Color.GREEN)
+                        break  //for
+                    }
+                } catch (e: SocketTimeoutException) {
+                    // no replay from device
+                    startBtn.text = "No Replay"
+                    startBtn.isEnabled = false
+                    startBtn.setBackgroundColor(Color.GRAY)
+                }
+            }
             startBtn.isEnabled = false
             startBtn.setBackgroundColor(Color.RED)
             if (canVibrate) vibrator.vibrate(milliseconds)

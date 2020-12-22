@@ -24,7 +24,7 @@ val  targetNetName="theflat"
 //val  targetNetName="AndroidWifi"
 var wifiTimerIntervalLong = 5000L
 var wifiTimerIntervalShort = 1000L
-const val udpReplaySocketTimeout=100
+val udpReplaySocketTimeout=600
 const val udpRequestPort:Int = 54545
 const val udpReplayPort:Int = 54546
 var receiveBuf = ByteArray(256)
@@ -57,19 +57,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     inner class WifiTimerTask (val context: Context ):  Runnable{
-        var udpRequestSocket = DatagramSocket(udpRequestPort)
-        var udpReplaySocket  = DatagramSocket(udpReplayPort)
+        var udpRequestSocket = DatagramSocket(udpRequestPort).also { it.broadcast = true }
+        var udpReplaySocket  = DatagramSocket(udpReplayPort).also{it.soTimeout = udpReplaySocketTimeout}
         var deviceIp = getBroadcastAddress()
         var handler = android.os.Handler()
         var ssid =""
         var stopWork = false
         var n:Long = 0
 
-        init {
-            n=0
-            udpReplaySocket.soTimeout = udpReplaySocketTimeout
-            udpRequestSocket.setBroadcast(true)
-        }
 
         public fun stringOverUdp(s:String, Addr:InetAddress){
             var udpRequest = s.toByteArray()
@@ -132,9 +127,8 @@ class MainActivity : AppCompatActivity() {
         txt3 = findViewById(R.id.textView3) as TextView
         txt4 = findViewById(R.id.textView4) as TextView
 
-        wifiTimerTask = WifiTimerTask(this)
         val handler = android.os.Handler() // Handler вроде depricated
-        wifiTimerTask.handler=handler
+        wifiTimerTask = WifiTimerTask(this).also { it.handler=handler }
 
         txt1.text = "--------"
         // запускаем мониторинг сети по таймеру

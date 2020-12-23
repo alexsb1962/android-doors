@@ -122,10 +122,10 @@ class MainActivity : AppCompatActivity() {
         startBtn.isEnabled = false
         startBtn.setBackgroundColor(Color.GRAY)
 
-        txt1 = findViewById(R.id.textView1) as TextView
-        txt2 = findViewById(R.id.textView2) as TextView
-        txt3 = findViewById(R.id.textView3) as TextView
-        txt4 = findViewById(R.id.textView4) as TextView
+        txt1 = findViewById(R.id.txt1) as TextView
+        txt2 = findViewById(R.id.txt2) as TextView
+        txt3 = findViewById(R.id.txt3) as TextView
+        txt4 = findViewById(R.id.txt4) as TextView
 
         val handler = android.os.Handler() // Handler вроде depricated
         wifiTimerTask = WifiTimerTask(this).also { it.handler=handler }
@@ -139,28 +139,23 @@ class MainActivity : AppCompatActivity() {
         val milliseconds = 1000L
 
         startBtn.setOnClickListener {
-            // послать команду (максимум 3 раза)
+            // послать команду
             startBtn.isEnabled = false // во избежание повторного нажатия
-
-            for(  i in 1..3) {
-                wifiTimerTask.stringOverUdp("press", wifiTimerTask.deviceIp)
-                try {
-                    wifiTimerTask.udpReplaySocket.receive(udpReceivePacket)
-                    if (udpReceivePacket.data.toString() == "ok") {
-                        startBtn.isEnabled = true
-                        startBtn.text = wifiTimerTask.ssid
-                        startBtn.setBackgroundColor(Color.GREEN)
-                        break  //for
-                    }
-                } catch (e: SocketTimeoutException) {
-                    // no replay from device
-                    startBtn.text = "No Replay"
-                    startBtn.isEnabled = false
-                    startBtn.setBackgroundColor(Color.GRAY)
-                }
-            }
-            startBtn.isEnabled = false
             startBtn.setBackgroundColor(Color.RED)
+            wifiTimerTask.stringOverUdp("press", wifiTimerTask.deviceIp)
+            try {
+                wifiTimerTask.udpReplaySocket.receive(udpReceivePacket)
+                if (udpReceivePacket.data.toString() == "ok") {
+                    startBtn.isEnabled = true
+                    startBtn.text = wifiTimerTask.ssid
+                    startBtn.setBackgroundColor(Color.GREEN)
+                }
+            } catch (e: SocketTimeoutException) {
+                // no replay from device
+                startBtn.text = "No Replay"
+                startBtn.isEnabled = false
+                startBtn.setBackgroundColor(Color.GRAY)
+            }
             if (canVibrate) vibrator.vibrate(milliseconds)
             // пробуем запретить на 500мс с блокировкой потока
             TimeUnit.MILLISECONDS.sleep(500)

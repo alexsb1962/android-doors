@@ -11,6 +11,9 @@ import android.widget.Button
 import android.widget.TextView
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.ViewModel
+import kotlinx.coroutines.*
+import java.lang.Runnable
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
@@ -131,6 +134,8 @@ class MainActivity : AppCompatActivity() {
         wifiTimerTask = WifiTimerTask(this).also { it.handler=handler }
 
         txt1.text = "--------"
+
+
         // запускаем мониторинг сети по таймеру
         handler.post(wifiTimerTask)
 
@@ -157,10 +162,15 @@ class MainActivity : AppCompatActivity() {
                 startBtn.setBackgroundColor(Color.GRAY)
             }
             if (canVibrate) vibrator.vibrate(milliseconds)
-            // пробуем запретить на 500мс с блокировкой потока
-            TimeUnit.MILLISECONDS.sleep(500)
-            startBtn.isEnabled = true
-            startBtn.setBackgroundColor(Color.GREEN)
+            // пробуем запретить на 500мс без блокировки  потока
+
+            CoroutineScope(Dispatchers.Main).launch{
+                delay(500)
+                startBtn.isEnabled = true
+                startBtn.setBackgroundColor(Color.GREEN)
+            }
+
+
         }
     }
 
@@ -180,6 +190,7 @@ class MainActivity : AppCompatActivity() {
         System.exit(0); // не выполняется в текущем варианте
         super.onStop()
     }
+
     override fun onDestroy(){
         // todo при выходе - сначала custom затем супер
         super.onDestroy()

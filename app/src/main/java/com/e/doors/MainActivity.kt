@@ -6,12 +6,14 @@ import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Bundle
+import android.os.VibrationEffect
 import android.os.Vibrator
 import android.widget.Button
 import android.widget.TextView
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.*
 import java.lang.Runnable
 import java.net.DatagramPacket
@@ -42,8 +44,12 @@ fun getBroadcastAddress(): InetAddress {
     return InetAddress.getByAddress(quads)
 }
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), CoroutineScope {
     @RequiresApi(Build.VERSION_CODES.M)
+
+    protected val job = SupervisorJob()
+    override val coroutineContext = Dispatchers.Main.immediate+job
+    val cScope= CoroutineScope(Dispatchers.Main);
 
     public lateinit var   startBtn :Button
     public lateinit var txt1 :TextView
@@ -53,9 +59,9 @@ class MainActivity : AppCompatActivity() {
     public lateinit var wifiTimerTask : WifiTimerTask
 
     public fun getNetName():String {
-        var wifiManager = getApplicationContext().getSystemService(Context.WIFI_SERVICE) as WifiManager
-        var wifiInfo = wifiManager.getConnectionInfo() as WifiInfo
-        var netName = wifiInfo.getSSID().replace("\"", "")
+        val wifiManager = getApplicationContext().getSystemService(Context.WIFI_SERVICE) as WifiManager
+        val wifiInfo = wifiManager.getConnectionInfo() as WifiInfo
+        val netName = wifiInfo.getSSID().replace("\"", "")
         return netName
     }
 
@@ -97,7 +103,8 @@ class MainActivity : AppCompatActivity() {
                 stringOverUdp("IsSomebodyHere", deviceIp )
                 //ждем ответ ограниченное время !!!!!!!!!!
                 try {
-                    // пока обслуживаем только одно устройство
+                    // пока обслуживаем только одно устройствo
+                    // пофиг на возможную блокировку потока ui  
                     udpReplaySocket.receive(udpReceivePacket)
                     deviceIp = udpReceivePacket.getAddress()
                     deviceName = udpReceivePacket.getData().toString()
@@ -135,7 +142,6 @@ class MainActivity : AppCompatActivity() {
 
         txt1.text = "--------"
 
-
         // запускаем мониторинг сети по таймеру
         handler.post(wifiTimerTask)
 
@@ -161,24 +167,26 @@ class MainActivity : AppCompatActivity() {
                 startBtn.isEnabled = false
                 startBtn.setBackgroundColor(Color.GRAY)
             }
-            if (canVibrate) vibrator.vibrate(milliseconds)
-            // пробуем запретить на 500мс без блокировки  потока
+            if (canVibrate) {
+                //var vibrationEffect=VibrationEffect.createOneShot(milliseconds,255)
+                vibrator.vibrate(milliseconds)
+            }
 
-            CoroutineScope(Dispatchers.Main).launch{
+            // пробуем запретить на 500мс без блокировки  потока
+            cScope.launch{
                 delay(500)
                 startBtn.isEnabled = true
                 startBtn.setBackgroundColor(Color.GREEN)
             }
 
-
         }
     }
 
     override fun onStop() {
-        super.onStop()
         // буду убивать приложение с выгрузкой из памяти при малейшем чихе
         // остановить  подзадачу таймера
         wifiTimerTask.close()
+        super.onStop()
         //
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             finishAndRemoveTask();
@@ -193,6 +201,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy(){
         // todo при выходе - сначала custom затем супер
+        job.cancel()
         super.onDestroy()
     }
 }

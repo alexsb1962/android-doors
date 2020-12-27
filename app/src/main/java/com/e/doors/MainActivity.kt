@@ -1,6 +1,7 @@
 package com.e.doors
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.graphics.Color
 import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
@@ -25,8 +26,8 @@ import java.util.concurrent.TimeUnit
 //import kotlinx.coroutines.*
 
 //4
-val  targetNetName="theflat"
-//val  targetNetName="AndroidWifi"
+var  targetNetName="theflat"
+//var  targetNetName="AndroidWifi"
 var wifiTimerIntervalLong = 5000L
 var wifiTimerIntervalShort = 1000L
 val udpReplaySocketTimeout=600
@@ -37,6 +38,7 @@ var udpReceivePacket = DatagramPacket(receiveBuf, receiveBuf.size)
 var udpRequest = "IsSomebodyHere".toByteArray()
 var udpRequestPacket:DatagramPacket = DatagramPacket(udpRequest, udpRequest.size, getBroadcastAddress(), udpRequestPort)
 var deviceName = "doors"
+
 
 fun getBroadcastAddress(): InetAddress {
     val quads =ByteArray(4)
@@ -50,6 +52,9 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
     protected val job = SupervisorJob()
     override val coroutineContext = Dispatchers.Main.immediate+job
     val cScope= CoroutineScope(Dispatchers.Main);
+
+    lateinit var prefs: SharedPreferences
+    lateinit var valEditor = prefs.edit()
 
     public lateinit var   startBtn :Button
     public lateinit var txt1 :TextView
@@ -126,6 +131,17 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        prefs = getSharedPreferences("settings", Context.MODE_PRIVATE)
+        valEditor = prefs.edit()
+        targetNetName = prefs.getString("TARGET_NET_NAME","theflat")?:"theflat"
+        valEditor.putString("TARGET_NET_NAME", targetNetName)
+        wifiTimerIntervalLong=prefs.getLong("INTERVAL_LONG",wifiTimerIntervalLong)?:wifiTimerIntervalLong
+        valEditor.putLong("INTERVAL_LONG", wifiTimerIntervalLong)
+        wifiTimerIntervalShort=prefs.getLong("INTERVAL_SHORT", wifiTimerIntervalShort)?: wifiTimerIntervalShort
+        valEditor.putLong("INTERVAL_SHORT", wifiTimerIntervalShort)
+        valEditor.apply()
+        valEditor.commit()
 
         startBtn = findViewById(R.id.startBtn) as Button
         startBtn.text = "No connection"

@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
+import android.preference.PreferenceManager
 import android.widget.Button
 import android.widget.TextView
 import androidx.annotation.RequiresApi
@@ -52,10 +53,10 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
     protected val job = SupervisorJob()
     override val coroutineContext = Dispatchers.Main.immediate+job
     val cScope= CoroutineScope(Dispatchers.Main);
-
-    lateinit var prefs: SharedPreferences
-    lateinit var valEditor = prefs.edit()
-
+/*
+    var prefs = PreferenceManager.getDefaultSharedPreferences(this /* Activity context */)
+    var valEditor = prefs.edit()
+*/
     public lateinit var   startBtn :Button
     public lateinit var txt1 :TextView
     public lateinit var txt2 :TextView
@@ -132,8 +133,8 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        prefs = getSharedPreferences("settings", Context.MODE_PRIVATE)
-        valEditor = prefs.edit()
+        val prefs = getSharedPreferences("settings", Context.MODE_PRIVATE)
+        val valEditor = prefs.edit()
         targetNetName = prefs.getString("TARGET_NET_NAME","theflat")?:"theflat"
         valEditor.putString("TARGET_NET_NAME", targetNetName)
         wifiTimerIntervalLong=prefs.getLong("INTERVAL_LONG",wifiTimerIntervalLong)?:wifiTimerIntervalLong

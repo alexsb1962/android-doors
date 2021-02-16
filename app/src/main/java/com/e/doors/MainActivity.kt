@@ -40,7 +40,6 @@ var udpRequest = "IsSomebodyHere".toByteArray()
 var udpRequestPacket:DatagramPacket = DatagramPacket(udpRequest, udpRequest.size, getBroadcastAddress(), udpRequestPort)
 var deviceName = "doors"
 
-
 fun getBroadcastAddress(): InetAddress {
     val quads =ByteArray(4)
     quads[0] = 192.toByte(); quads[1] = 168.toByte(); quads[2] = 1.toByte(); quads[3] = 255.toByte()
@@ -48,17 +47,13 @@ fun getBroadcastAddress(): InetAddress {
 }
 
 class MainActivity : AppCompatActivity(), CoroutineScope {
-    @RequiresApi(Build.VERSION_CODES.M)
 
     protected val job = SupervisorJob()
     override val coroutineContext = Dispatchers.Main.immediate+job
     val cScope= CoroutineScope(Dispatchers.Main);
-/*
-    var prefs = PreferenceManager.getDefaultSharedPreferences(this /* Activity context */)
-    var valEditor = prefs.edit()
-*/
+
     public lateinit var   startBtn :Button
-    public lateinit var txt1 :TextView
+    lateinit var txt1 :TextView
     public lateinit var txt2 :TextView
     public lateinit var txt3 :TextView
     public lateinit var txt4 :TextView
@@ -143,6 +138,14 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         valEditor.putLong("INTERVAL_SHORT", wifiTimerIntervalShort)
         valEditor.apply()
         valEditor.commit()
+
+        val wifiManager = getApplicationContext().getSystemService(Context.WIFI_SERVICE) as WifiManager
+        val wifiInfo = wifiManager.getConnectionInfo() as WifiInfo
+        val netName = wifiInfo.getSSID().replace("\"", "")
+        val wifiStatus = wifiManager.isWifiEnabled()
+        wifiManager.startScan()
+        val wifiList = wifiManager.scanResults
+
 
         startBtn = findViewById(R.id.startBtn) as Button
         startBtn.text = "No connection"

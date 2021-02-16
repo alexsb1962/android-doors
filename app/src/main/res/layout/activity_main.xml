@@ -9,11 +9,10 @@
     <Button
         android:id="@+id/startBtn"
         android:layout_width="0dp"
-        android:layout_height="15mm"
+        android:layout_height="150dp"
         android:layout_marginStart="100dp"
         android:layout_marginTop="100dp"
         android:layout_marginEnd="100dp"
-        android:text="Not connected"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.51"
         app:layout_constraintStart_toStartOf="parent"
@@ -22,7 +21,7 @@
     <TextView
         android:id="@+id/txt1"
         android:layout_width="0dp"
-        android:layout_height="6mm"
+        android:layout_height="60dp"
         android:layout_marginStart="32dp"
         android:layout_marginTop="32dp"
         app:layout_constraintEnd_toEndOf="parent"
@@ -33,7 +32,7 @@
     <TextView
         android:id="@+id/txt2"
         android:layout_width="0dp"
-        android:layout_height="6mm"
+        android:layout_height="60dp"
         android:layout_marginTop="20dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="@+id/txt1"
@@ -42,7 +41,7 @@
     <TextView
         android:id="@+id/txt3"
         android:layout_width="0dp"
-        android:layout_height="6mm"
+        android:layout_height="60dp"
         android:layout_marginTop="20dp"
         app:layout_constraintEnd_toEndOf="@+id/txt2"
         app:layout_constraintStart_toStartOf="@+id/txt2"
@@ -51,7 +50,7 @@
     <TextView
         android:id="@+id/txt4"
         android:layout_width="0dp"
-        android:layout_height="6mm"
+        android:layout_height="60dp"
         android:layout_marginTop="20dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="@+id/txt3"

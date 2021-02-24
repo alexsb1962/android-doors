@@ -78,17 +78,6 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         var n:Long = 0
 
 
-        fun stringOverUdp(s:String, Addr:InetAddress){
-            val udpRequest = s.toByteArray()
-            val udpRequestPacket = DatagramPacket(udpRequest, udpRequest.size, Addr, udpRequestPort)
-            udpRequestSocket.send(udpRequestPacket)
-        }
-
-        fun close(){
-            udpRequestSocket.close()
-            udpReplaySocket.close()
-            stopWork=true
-        }
 
         override fun run() {
             if(stopWork)  return

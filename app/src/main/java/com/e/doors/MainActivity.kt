@@ -1,3 +1,5 @@
+@file:Suppress("UsePropertyAccessSyntax")
+
 package com.e.doors
 
 import android.content.Context
@@ -31,7 +33,7 @@ var  targetNetName="theflat"
 //var  targetNetName="AndroidWifi"
 var wifiTimerIntervalLong = 5000L
 var wifiTimerIntervalShort = 1000L
-val udpReplaySocketTimeout=600
+var udpReplaySocketTimeout=600
 const val udpRequestPort:Int = 54545
 const val udpReplayPort:Int = 54546
 var receiveBuf = ByteArray(256)
@@ -50,16 +52,16 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
 
     protected val job = SupervisorJob()
     override val coroutineContext = Dispatchers.Main.immediate+job
-    val cScope= CoroutineScope(Dispatchers.Main);
+    val cScope= CoroutineScope(Dispatchers.Main)
 
-    public lateinit var   startBtn :Button
+    lateinit var   startBtn :Button
     lateinit var txt1 :TextView
-    public lateinit var txt2 :TextView
-    public lateinit var txt3 :TextView
-    public lateinit var txt4 :TextView
-    public lateinit var wifiTimerTask : WifiTimerTask
+    lateinit var txt2 :TextView
+    lateinit var txt3 :TextView
+    lateinit var txt4 :TextView
+    lateinit var wifiTimerTask : WifiTimerTask
 
-    public fun getNetName():String {
+    fun getNetName():String {
         val wifiManager = getApplicationContext().getSystemService(Context.WIFI_SERVICE) as WifiManager
         val wifiInfo = wifiManager.getConnectionInfo() as WifiInfo
         val netName = wifiInfo.getSSID().replace("\"", "")
@@ -76,20 +78,20 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         var n:Long = 0
 
 
-        public fun stringOverUdp(s:String, Addr:InetAddress){
-            var udpRequest = s.toByteArray()
-            var udpRequestPacket = DatagramPacket(udpRequest, udpRequest.size, Addr, udpRequestPort)
+        fun stringOverUdp(s:String, Addr:InetAddress){
+            val udpRequest = s.toByteArray()
+            val udpRequestPacket = DatagramPacket(udpRequest, udpRequest.size, Addr, udpRequestPort)
             udpRequestSocket.send(udpRequestPacket)
         }
 
-        public fun close(){
+        fun close(){
             udpRequestSocket.close()
             udpReplaySocket.close()
             stopWork=true
         }
 
         override fun run() {
-            if(stopWork)  return ;
+            if(stopWork)  return
             n++
             // запланирую сл.запуск
             if ( startBtn.isEnabled() ) handler.postDelayed(this, wifiTimerIntervalLong) else handler.postDelayed(this, wifiTimerIntervalShort)
@@ -138,14 +140,6 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         valEditor.putLong("INTERVAL_SHORT", wifiTimerIntervalShort)
         valEditor.apply()
         valEditor.commit()
-
-        val wifiManager = getApplicationContext().getSystemService(Context.WIFI_SERVICE) as WifiManager
-        val wifiInfo = wifiManager.getConnectionInfo() as WifiInfo
-        val netName = wifiInfo.getSSID().replace("\"", "")
-        val wifiStatus = wifiManager.isWifiEnabled()
-        wifiManager.startScan()
-        val wifiList = wifiManager.scanResults
-
 
         startBtn = findViewById(R.id.startBtn) as Button
         startBtn.text = "No connection"
@@ -208,14 +202,18 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         wifiTimerTask.close()
         super.onStop()
         //
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            finishAndRemoveTask();
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-            finishAffinity();
-        } else {
-            finish();
+        when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP -> {
+                finishAndRemoveTask()
+            }
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN -> {
+                finishAffinity()
+            }
+            else -> {
+                finish()
+            }
         }
-        System.exit(0); // не выполняется в текущем варианте
+        System.exit(0) // не выполняется в текущем варианте
         super.onStop()
     }
 

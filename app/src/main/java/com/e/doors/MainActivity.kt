@@ -145,7 +145,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
 
         txt1.text = "--------"
 
-        // запускаем мониторинг сети по таймеру
+        // мониторинг сети по таймеру
         handler.post(wifiTimerTask)
 
         val vibrator = getApplicationContext().getSystemService(Context.VIBRATOR_SERVICE) as Vibrator

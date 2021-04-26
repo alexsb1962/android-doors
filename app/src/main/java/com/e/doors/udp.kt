@@ -15,6 +15,7 @@ class UdpServ(udpRequestPort:Int=54545, udpReplayPort:Int=54546,udpReplaySocketT
     var udpRequest = "IsSomebodyHere".toByteArray()
     var udpRequestPacket:DatagramPacket = DatagramPacket(udpRequest, udpRequest.size, getBroadcastAddress(), udpRequestPort)
     var deviceIp= getBroadcastAddress()
+    var stopWork=false
 
     init{
         stringToUdp("IsSomeBodyHere",deviceIp)
@@ -28,7 +29,7 @@ class UdpServ(udpRequestPort:Int=54545, udpReplayPort:Int=54546,udpReplaySocketT
         }
     }
 
-    fun stringToUdp(s:String, Addr: InetAddress){
+    private fun stringOverUdp(s:String, Addr: InetAddress){
         val udpRequest = s.toByteArray()
         val udpRequestPacket = DatagramPacket(udpRequest, udpRequest.size, Addr, udpRequestPort)
         udpRequestSocket.send(udpRequestPacket)

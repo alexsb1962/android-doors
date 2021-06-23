@@ -54,7 +54,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
     val cScope= CoroutineScope(Dispatchers.Main);
 
     lateinit var prefs: SharedPreferences
-    lateinit var valEditor = prefs.edit()
+    var valEditor = prefs.edit()
 
     public lateinit var   startBtn :Button
     public lateinit var txt1 :TextView

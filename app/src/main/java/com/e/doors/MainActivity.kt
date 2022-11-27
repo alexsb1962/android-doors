@@ -12,8 +12,6 @@ import android.widget.Button
 import android.widget.TextView
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.*
 import java.lang.Runnable
 import java.net.DatagramPacket
@@ -21,11 +19,12 @@ import java.net.DatagramSocket
 import java.net.InetAddress
 import java.net.SocketTimeoutException
 import java.util.concurrent.TimeUnit
+import kotlin.system.exitProcess
 
 //import kotlinx.coroutines.*
 
 //4
-val  targetNetName="theflat"
+var  targetNetName="theflat"
 //val  targetNetName="AndroidWifi"
 var wifiTimerIntervalLong = 5000L
 var wifiTimerIntervalShort = 1000L
@@ -49,46 +48,47 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
 
     protected val job = SupervisorJob()
     override val coroutineContext = Dispatchers.Main.immediate+job
-    val cScope= CoroutineScope(Dispatchers.Main);
+    val cScope= CoroutineScope(Dispatchers.Main)
 
-    public lateinit var   startBtn :Button
-    public lateinit var txt1 :TextView
-    public lateinit var txt2 :TextView
-    public lateinit var txt3 :TextView
-    public lateinit var txt4 :TextView
-    public lateinit var wifiTimerTask : WifiTimerTask
+    lateinit var   startBtn :Button
+    lateinit var txt1 :TextView
+    lateinit var txt2 :TextView
+    lateinit var txt3 :TextView
+    lateinit var txt4 :TextView
+    lateinit var wifiTimerTask : WifiTimerTask
 
-    public fun getNetName():String {
-        val wifiManager = getApplicationContext().getSystemService(Context.WIFI_SERVICE) as WifiManager
-        val wifiInfo = wifiManager.getConnectionInfo() as WifiInfo
+    fun getNetName():String {
+        val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+        val wifiInfo: WifiInfo = wifiManager.getConnectionInfo() as WifiInfo
         val netName = wifiInfo.getSSID().replace("\"", "")
         return netName
     }
 
-    inner class WifiTimerTask (val context: Context ):  Runnable{
+    inner class WifiTimerTask (context: Context):  Runnable{
         var udpRequestSocket = DatagramSocket(udpRequestPort).also { it.broadcast = true }
         var udpReplaySocket  = DatagramSocket(udpReplayPort).also{it.soTimeout = udpReplaySocketTimeout}
         var deviceIp = getBroadcastAddress()
+        var dermoIp = getBroadcastAddress()
         var handler = android.os.Handler()
         var ssid =""
         var stopWork = false
         var n:Long = 0
 
 
-        public fun stringOverUdp(s:String, Addr:InetAddress){
-            var udpRequest = s.toByteArray()
-            var udpRequestPacket = DatagramPacket(udpRequest, udpRequest.size, Addr, udpRequestPort)
+        fun stringOverUdp(s:String, addr:InetAddress){
+            val udpRequest = s.toByteArray()
+            val udpRequestPacket = DatagramPacket(udpRequest, udpRequest.size, addr, udpRequestPort)
             udpRequestSocket.send(udpRequestPacket)
         }
 
-        public fun close(){
+        fun close(){
             udpRequestSocket.close()
             udpReplaySocket.close()
             stopWork=true
         }
 
         override fun run() {
-            if(stopWork)  return ;
+            if(stopWork)  return
             n++
             // запланирую сл.запуск
             if ( startBtn.isEnabled() ) handler.postDelayed(this, wifiTimerIntervalLong) else handler.postDelayed(this, wifiTimerIntervalShort)
@@ -98,7 +98,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
             if (ssid != targetNetName) {
                 startBtn.isEnabled = false
                 startBtn.setBackgroundColor(Color.GRAY)
-                startBtn.text = "No Net"
+                startBtn.text = getString(R.string.NoNet)
             } else {
                 stringOverUdp("IsSomebodyHere", deviceIp )
                 //ждем ответ ограниченное время !!!!!!!!!!
@@ -108,13 +108,17 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
                     udpReplaySocket.receive(udpReceivePacket)
                     deviceIp = udpReceivePacket.getAddress()
                     deviceName = udpReceivePacket.getData().toString()
+                    if( deviceName == "dermometter"){
+                        dermoIp=deviceIp;
+                    }
                     txt4.text = deviceIp.toString()
                     startBtn.isEnabled = true
                     startBtn.setBackgroundColor(Color.GREEN)
-                    startBtn.text = "Connected"
+                    startBtn.text =  getString(R.string.Connected)
+
                 }
                 catch (e: SocketTimeoutException) {
-                    startBtn.text = "No device"
+                    startBtn.text =  getString(R.string.NoDevice)
                     startBtn.isEnabled = false
                     startBtn.setBackgroundColor(Color.GRAY)
                     deviceIp = getBroadcastAddress()
@@ -128,7 +132,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         setContentView(R.layout.activity_main)
 
         startBtn = findViewById(R.id.startBtn) as Button
-        startBtn.text = "No connection"
+        startBtn.text = getString(R.string.Noconnection )
         startBtn.isEnabled = false
         startBtn.setBackgroundColor(Color.GRAY)
 
@@ -138,7 +142,9 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         txt4 = findViewById(R.id.txt4) as TextView
 
         val handler = android.os.Handler() // Handler вроде depricated
-        wifiTimerTask = WifiTimerTask(this).also { it.handler=handler }
+        wifiTimerTask = WifiTimerTask(this.applicationContext).also { it.handler=handler }
+
+        wifiTimerTask.stringOverUdp( "IsSomeBodyHere", getBroadcastAddress()  )
 
         txt1.text = "--------"
 
@@ -163,7 +169,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
                 }
             } catch (e: SocketTimeoutException) {
                 // no replay from device
-                startBtn.text = "No Replay"
+                startBtn.text = getString(R.string.NoReplay)
                 startBtn.isEnabled = false
                 startBtn.setBackgroundColor(Color.GRAY)
             }
@@ -189,13 +195,13 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         super.onStop()
         //
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            finishAndRemoveTask();
+            finishAndRemoveTask()
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-            finishAffinity();
+            finishAffinity()
         } else {
-            finish();
+            finish()
         }
-        System.exit(0); // не выполняется в текущем варианте
+        exitProcess(0) // не выполняется в текущем варианте
         super.onStop()
     }
 

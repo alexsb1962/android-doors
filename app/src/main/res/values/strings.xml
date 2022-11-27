@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">Doors</string>
+    <string name="NoNet"> No Net</string>
+    <string name="NoDevice">No Device</string>
+    <string name="Connected">Connected</string>
+    <string name="Noconnection">No connection</string>
+    <string name="NoReplay">No Replay</string>
+
 </resources>

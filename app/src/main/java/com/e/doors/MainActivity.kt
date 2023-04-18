@@ -16,10 +16,6 @@ import java.net.InetAddress
 import java.net.SocketTimeoutException
 import kotlin.system.exitProcess
 
-//import kotlinx.coroutines.*
-
-//4
-
 fun getBroadcastAddress(): InetAddress {
     val quads =ByteArray(4)
     quads[0] = 192.toByte(); quads[1] = 168.toByte(); quads[2] = 1.toByte(); quads[3] = 255.toByte()
@@ -28,7 +24,7 @@ fun getBroadcastAddress(): InetAddress {
 
 data class SomePref( var deviceName: String,
                      var homeNet:String,
-                     var targetIp: String
+                     var targetIp: InetAddress
 )
 
 
@@ -36,18 +32,19 @@ class MainActivity : AppCompatActivity() {
     @RequiresApi(Build.VERSION_CODES.M)
 
     //val  targetNetName="AndroidWifi"
-    var wifiTimerIntervalLong = 5000L
     var wifiTimerIntervalShort = 1000L
-    val udpReplaySocketTimeout=600
-    const val udpRequestPort:Int = 54545
-    const val udpReplayPort:Int = 54546
+    val udpReplaySocketTimeout=500  // время на отклик устройства
+    val udpRequestPort:Int = 54545
+    val udpReplayPort:Int = 54546
     var receiveBuf = ByteArray(256)
     var udpReceivePacket = DatagramPacket(receiveBuf, receiveBuf.size)
     var udpRequest = "IsSomeDoorsHere".toByteArray()
-    var udpRequestPacket:DatagramPacket = DatagramPacket(udpRequest, udpRequest.size, getBroadcastAddress(), udpRequestPort)
     var deviceName = "doors"
-    var prefData = SomePref("doors", "theflat", "192.168.100.101")
+    var prefData = SomePref("doors", "theflat",
+                            InetAddress.getByAddress(byteArrayOf(192.toByte(),168.toByte(),100.toByte(),100.toByte()) ) )
 
+    var udpRequestSocket = DatagramSocket(udpRequestPort).also { it.broadcast = true }
+    var udpReplaySocket  = DatagramSocket(udpReplayPort).also{it.soTimeout = udpReplaySocketTimeout}
 
 
     lateinit var   startBtn :Button
@@ -60,81 +57,20 @@ class MainActivity : AppCompatActivity() {
 
     fun getNetName(): String {
         val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-        val wifiInfo: WifiInfo = wifiManager.connectionInfo as WifiInfo
+        val wifiInfo = wifiManager.connectionInfo as WifiInfo
         return wifiInfo.ssid.replace("\"", "")
     }
 
-    inner class WifiTimerTask (context: Context):  Runnable{
-        var udpRequestSocket = DatagramSocket(udpRequestPort).also { it.broadcast = true }
-        var udpReplaySocket  = DatagramSocket(udpReplayPort).also{it.soTimeout = udpReplaySocketTimeout}
-        var deviceIp = getBroadcastAddress()
-        var dermoIp = getBroadcastAddress()
-        var handler = android.os.Handler()
-        var ssid =""
-        var stopWork = false
-        var n:Long = 0
-
-
-        fun stringOverUdp(s:String, addr:InetAddress){
-            val udpRequest = s.toByteArray()
-            val udpRequestPacket = DatagramPacket(udpRequest, udpRequest.size, addr, udpRequestPort)
-            udpRequestSocket.send(udpRequestPacket)
-        }
-
-        fun close(){
-            udpRequestSocket.close()
-            udpReplaySocket.close()
-            stopWork=true
-        }
-
-        override fun run() {
-            if(stopWork)  return
-            n++
-            // запланирую сл.запуск
-            if ( startBtn.isEnabled() ) handler.postDelayed(this, wifiTimerIntervalLong) else handler.postDelayed(this, wifiTimerIntervalShort)
-            ssid=getNetName()
-            txt2.text = ssid
-            txt3.text = n.toString()
-            if (ssid != targetNetName) {
-                startBtn.isEnabled = false
-                startBtn.setBackgroundColor(Color.GRAY)
-                startBtn.text = getString(R.string.NoNet)
-            } else {
-                stringOverUdp("IsSomebodyHere", deviceIp )
-                //ждем ответ ограниченное время !!!!!!!!!!
-                try {
-                    // пока обслуживаем только одно устройствo
-                    // пофиг на возможную блокировку потока ui  
-                    udpReplaySocket.receive(udpReceivePacket)
-                    deviceIp = udpReceivePacket.getAddress()
-                    deviceName = udpReceivePacket.getData().toString()
-                    if( deviceName == "dermometter"){
-                        dermoIp=deviceIp;
-                    }
-                    txt4.text = deviceIp.toString()
-                    startBtn.isEnabled = true
-                    startBtn.setBackgroundColor(Color.GREEN)
-                    startBtn.text =  getString(R.string.Connected)
-
-                }
-                catch (e: SocketTimeoutException) {
-                    startBtn.text =  getString(R.string.NoDevice)
-                    startBtn.isEnabled = false
-                    startBtn.setBackgroundColor(Color.GRAY)
-                    deviceIp = getBroadcastAddress()
-                }
-            }
-        }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        savedValues = getSharedPreferences("app_values", Context.MODE_PRIVATE)
-        homeNet = savedValues.getString("homeNet","") ?: ""
+        /*
+        val savedValues = getSharedPreferences("app_values", Context.MODE_PRIVATE)
+        ssid = savedValues.getString("homeNet","theflat") ?: ""
         targetIP = savedValues.getString("targetIP","0.0.0.0") ?: "0.0.0.0"
-
+        */
 
         startBtn = findViewById(R.id.startBtn) as Button
         startBtn.text = getString(R.string.Noconnection )
@@ -156,16 +92,41 @@ class MainActivity : AppCompatActivity() {
 
         // запускаем мониторинг сети
         // handler.post(wifiTimerTask)
-
-        
         val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
         var  wifiInfo = wifiManager.connectionInfo as WifiInfo
-        var netName = wifiInfo.ssid.replace("\"", "")
+        var ssid = wifiInfo.ssid.replace("\"", "")
 
         val wifiScanReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
-                wifiInfo = wifiManager.connectionInfo as WifiInfo
-                netName = wifiInfo.ssid.replace("\"", "")
+                ssid = getNetName()
+                if(ssid == prefData.homeNet){
+                    // широковещательный запрос на наличие именно нашего контроллера
+                    udpRequestSocket.broadcast = true
+                    udpRequestSocket.send( DatagramPacket(udpRequest, udpRequest.size,getBroadcastAddress(), udpRequestPort)   )
+
+                    try {
+                        // пока обслуживаем только одно устройствo
+                        // пофиг на возможную блокировку потока ui
+                        udpReplaySocket.receive(udpReceivePacket)
+                        prefData.targetIp = udpReceivePacket.getAddress()
+                        deviceName = udpReceivePacket.getData().toString()
+                        txt4.text = prefData.targetIp.toString()
+                        startBtn.isEnabled = true
+                        startBtn.setBackgroundColor(Color.GREEN)
+                        startBtn.text =  getString(R.string.Connected)
+                    }
+                    catch (e: SocketTimeoutException) {
+                        startBtn.text =  getString(R.string.NoDevice)
+                        startBtn.isEnabled = false
+                        startBtn.setBackgroundColor(Color.GRAY)
+                        prefData.targetIp = getBroadcastAddress()
+                    }
+                } else{
+                    startBtn.text =  "NoWifiNet"
+                    startBtn.isEnabled = false
+                    startBtn.setBackgroundColor(Color.GRAY)
+                    prefData.targetIp = getBroadcastAddress()
+                }
             }
         }
 
@@ -185,12 +146,13 @@ class MainActivity : AppCompatActivity() {
             // послать команду
             startBtn.isEnabled = false // во избежание повторного нажатия
             startBtn.setBackgroundColor(Color.RED)
-            wifiTimerTask.stringOverUdp("press", wifiTimerTask.deviceIp)
+            udpRequestSocket.broadcast = false
+            udpRequestSocket.send( DatagramPacket( "press","press".length, prefData.targetIp, udpRequestPort))
             try {
-                wifiTimerTask.udpReplaySocket.receive(udpReceivePacket)
+                udpReplaySocket.receive(udpReceivePacket)
                 if (udpReceivePacket.data.toString() == "ok") {
                     startBtn.isEnabled = true
-                    startBtn.text = wifiTimerTask.ssid
+                    startBtn.text = ssid
                     startBtn.setBackgroundColor(Color.GREEN)
                 }
             } catch (e: SocketTimeoutException) {

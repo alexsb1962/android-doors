@@ -1,41 +1,24 @@
 package com.e.doors
 
-import android.content.Context
+import android.content.*
 import android.graphics.Color
 import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
-import android.os.Build
-import android.os.Bundle
-import android.os.VibrationEffect
-import android.os.Vibrator
+import android.os.*
 import android.widget.Button
 import android.widget.TextView
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
-import kotlinx.coroutines.*
 import java.lang.Runnable
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
 import java.net.SocketTimeoutException
-import java.util.concurrent.TimeUnit
 import kotlin.system.exitProcess
 
 //import kotlinx.coroutines.*
 
 //4
-var  targetNetName="theflat"
-//val  targetNetName="AndroidWifi"
-var wifiTimerIntervalLong = 5000L
-var wifiTimerIntervalShort = 1000L
-val udpReplaySocketTimeout=600
-const val udpRequestPort:Int = 54545
-const val udpReplayPort:Int = 54546
-var receiveBuf = ByteArray(256)
-var udpReceivePacket = DatagramPacket(receiveBuf, receiveBuf.size)
-var udpRequest = "IsSomebodyHere".toByteArray()
-var udpRequestPacket:DatagramPacket = DatagramPacket(udpRequest, udpRequest.size, getBroadcastAddress(), udpRequestPort)
-var deviceName = "doors"
 
 fun getBroadcastAddress(): InetAddress {
     val quads =ByteArray(4)
@@ -43,25 +26,42 @@ fun getBroadcastAddress(): InetAddress {
     return InetAddress.getByAddress(quads)
 }
 
-class MainActivity : AppCompatActivity(), CoroutineScope {
+data class SomePref( var deviceName: String,
+                     var homeNet:String,
+                     var targetIp: String
+)
+
+
+class MainActivity : AppCompatActivity() {
     @RequiresApi(Build.VERSION_CODES.M)
 
-    protected val job = SupervisorJob()
-    override val coroutineContext = Dispatchers.Main.immediate+job
-    val cScope= CoroutineScope(Dispatchers.Main)
+    //val  targetNetName="AndroidWifi"
+    var wifiTimerIntervalLong = 5000L
+    var wifiTimerIntervalShort = 1000L
+    val udpReplaySocketTimeout=600
+    const val udpRequestPort:Int = 54545
+    const val udpReplayPort:Int = 54546
+    var receiveBuf = ByteArray(256)
+    var udpReceivePacket = DatagramPacket(receiveBuf, receiveBuf.size)
+    var udpRequest = "IsSomeDoorsHere".toByteArray()
+    var udpRequestPacket:DatagramPacket = DatagramPacket(udpRequest, udpRequest.size, getBroadcastAddress(), udpRequestPort)
+    var deviceName = "doors"
+    var prefData = SomePref("doors", "theflat", "192.168.100.101")
+
+
 
     lateinit var   startBtn :Button
     lateinit var txt1 :TextView
     lateinit var txt2 :TextView
     lateinit var txt3 :TextView
     lateinit var txt4 :TextView
-    lateinit var wifiTimerTask : WifiTimerTask
 
-    fun getNetName():String {
+
+
+    fun getNetName(): String {
         val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-        val wifiInfo: WifiInfo = wifiManager.getConnectionInfo() as WifiInfo
-        val netName = wifiInfo.getSSID().replace("\"", "")
-        return netName
+        val wifiInfo: WifiInfo = wifiManager.connectionInfo as WifiInfo
+        return wifiInfo.ssid.replace("\"", "")
     }
 
     inner class WifiTimerTask (context: Context):  Runnable{
@@ -131,6 +131,11 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        savedValues = getSharedPreferences("app_values", Context.MODE_PRIVATE)
+        homeNet = savedValues.getString("homeNet","") ?: ""
+        targetIP = savedValues.getString("targetIP","0.0.0.0") ?: "0.0.0.0"
+
+
         startBtn = findViewById(R.id.startBtn) as Button
         startBtn.text = getString(R.string.Noconnection )
         startBtn.isEnabled = false
@@ -141,15 +146,36 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         txt3 = findViewById(R.id.txt3) as TextView
         txt4 = findViewById(R.id.txt4) as TextView
 
-        val handler = android.os.Handler() // Handler вроде depricated
-        wifiTimerTask = WifiTimerTask(this.applicationContext).also { it.handler=handler }
+       // val handler = android.os.Handler() // Handler вроде depricated
 
-        wifiTimerTask.stringOverUdp( "IsSomeBodyHere", getBroadcastAddress()  )
+       // wifiTimerTask = WifiTimerTask(this.applicationContext).also { it.handler=handler }
+
+        //wifiTimerTask.stringOverUdp( "IsSomeBodyHere", getBroadcastAddress()  )
 
         txt1.text = "--------"
 
-        // запускаем мониторинг сети по таймеру
-        handler.post(wifiTimerTask)
+        // запускаем мониторинг сети
+        // handler.post(wifiTimerTask)
+
+        
+        val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+        var  wifiInfo = wifiManager.connectionInfo as WifiInfo
+        var netName = wifiInfo.ssid.replace("\"", "")
+
+        val wifiScanReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                wifiInfo = wifiManager.connectionInfo as WifiInfo
+                netName = wifiInfo.ssid.replace("\"", "")
+            }
+        }
+
+        val intentFilter = IntentFilter()
+//        intentFilter.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION)
+        intentFilter.addAction(WifiManager.ACTION_WIFI_NETWORK_SUGGESTION_POST_CONNECTION)
+        applicationContext.registerReceiver(wifiScanReceiver, intentFilter)
+
+
+
 
         val vibrator = getApplicationContext().getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
         val canVibrate: Boolean = vibrator.hasVibrator()
@@ -178,18 +204,22 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
                 vibrator.vibrate(milliseconds)
             }
 
-            // пробуем запретить на 500мс без блокировки  потока
-            cScope.launch{
-                delay(500)
-                startBtn.isEnabled = true
-                startBtn.setBackgroundColor(Color.GREEN)
-            }
+
+            startBtn.isEnabled = true
+            startBtn.setBackgroundColor(Color.GREEN)
 
         }
     }
 
     override fun onStop() {
         // буду убивать приложение с выгрузкой из памяти при малейшем чихе
+
+        // сохранение кой чего
+        var ed = savedValues.edit()
+        ed.putString("homeNet",homeNet)
+        ed.putString("targetIP",targetIP)
+        ed.apply()
+
         // остановить  подзадачу таймера
         wifiTimerTask.close()
         super.onStop()
@@ -207,7 +237,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
 
     override fun onDestroy(){
         // todo при выходе - сначала custom затем супер
-        job.cancel()
+        //cancel()
         super.onDestroy()
     }
 }

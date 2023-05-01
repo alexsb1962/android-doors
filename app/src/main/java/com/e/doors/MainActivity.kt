@@ -29,10 +29,9 @@ data class SomePref( var deviceName: String,
 
 
 class MainActivity : AppCompatActivity() {
-    @RequiresApi(Build.VERSION_CODES.M)
+  //  @RequiresApi(Build.VERSION_CODES.M)
 
     //val  targetNetName="AndroidWifi"
-    var wifiTimerIntervalShort = 1000L
     val udpReplaySocketTimeout=500  // время на отклик устройства
     val udpRequestPort:Int = 54545
     val udpReplayPort:Int = 54546
@@ -42,6 +41,9 @@ class MainActivity : AppCompatActivity() {
     var deviceName = "doors"
     var prefData = SomePref("doors", "theflat",
                             InetAddress.getByAddress(byteArrayOf(192.toByte(),168.toByte(),100.toByte(),100.toByte()) ) )
+    val vibrator = getApplicationContext().getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+    val canVibrate: Boolean = vibrator.hasVibrator()
+    val milliseconds = 300L
 
     var udpRequestSocket = DatagramSocket(udpRequestPort).also { it.broadcast = true }
     var udpReplaySocket  = DatagramSocket(udpReplayPort).also{it.soTimeout = udpReplaySocketTimeout}
@@ -66,11 +68,11 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        /*
+
         val savedValues = getSharedPreferences("app_values", Context.MODE_PRIVATE)
-        ssid = savedValues.getString("homeNet","theflat") ?: ""
-        targetIP = savedValues.getString("targetIP","0.0.0.0") ?: "0.0.0.0"
-        */
+        val savedNet = savedValues.getString("homeNet","theflat") ?: ""
+        val savedIP = savedValues.getString("targetIP","0.0.0.0") ?: "0.0.0.0"
+
 
         startBtn = findViewById(R.id.startBtn) as Button
         startBtn.text = getString(R.string.Noconnection )
@@ -135,19 +137,12 @@ class MainActivity : AppCompatActivity() {
         intentFilter.addAction(WifiManager.ACTION_WIFI_NETWORK_SUGGESTION_POST_CONNECTION)
         applicationContext.registerReceiver(wifiScanReceiver, intentFilter)
 
-
-
-
-        val vibrator = getApplicationContext().getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-        val canVibrate: Boolean = vibrator.hasVibrator()
-        val milliseconds = 1000L
-
         startBtn.setOnClickListener {
             // послать команду
             startBtn.isEnabled = false // во избежание повторного нажатия
             startBtn.setBackgroundColor(Color.RED)
             udpRequestSocket.broadcast = false
-            udpRequestSocket.send( DatagramPacket( "press","press".length, prefData.targetIp, udpRequestPort))
+            udpRequestSocket.send( DatagramPacket( "press".toByteArray(),"press".length, prefData.targetIp, udpRequestPort))
             try {
                 udpReplaySocket.receive(udpReceivePacket)
                 if (udpReceivePacket.data.toString() == "ok") {
@@ -162,10 +157,10 @@ class MainActivity : AppCompatActivity() {
                 startBtn.setBackgroundColor(Color.GRAY)
             }
             if (canVibrate) {
-                //var vibrationEffect=VibrationEffect.createOneShot(milliseconds,255)
+                // var vibrationEffect=VibrationEffect.createOneShot(milliseconds,255)
+                // vibrator.vibrate(vibrationEffect)
                 vibrator.vibrate(milliseconds)
             }
-
 
             startBtn.isEnabled = true
             startBtn.setBackgroundColor(Color.GREEN)
@@ -176,14 +171,14 @@ class MainActivity : AppCompatActivity() {
     override fun onStop() {
         // буду убивать приложение с выгрузкой из памяти при малейшем чихе
 
+        /*
         // сохранение кой чего
         var ed = savedValues.edit()
         ed.putString("homeNet",homeNet)
         ed.putString("targetIP",targetIP)
         ed.apply()
+        */
 
-        // остановить  подзадачу таймера
-        wifiTimerTask.close()
         super.onStop()
         //
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {

@@ -14,6 +14,7 @@ import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
 import java.net.SocketTimeoutException
+import java.util.*
 import kotlin.system.exitProcess
 
 fun getBroadcastAddress(): InetAddress {
@@ -41,9 +42,7 @@ class MainActivity : AppCompatActivity() {
     var deviceName = "doors"
     var prefData = SomePref("doors", "theflat",
                             InetAddress.getByAddress(byteArrayOf(192.toByte(),168.toByte(),100.toByte(),100.toByte()) ) )
-    val vibrator = getApplicationContext().getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-    val canVibrate: Boolean = vibrator.hasVibrator()
-    val milliseconds = 300L
+    private val milliseconds = 300L
 
     var udpRequestSocket = DatagramSocket(udpRequestPort).also { it.broadcast = true }
     var udpReplaySocket  = DatagramSocket(udpReplayPort).also{it.soTimeout = udpReplaySocketTimeout}
@@ -54,6 +53,7 @@ class MainActivity : AppCompatActivity() {
     lateinit var txt2 :TextView
     lateinit var txt3 :TextView
     lateinit var txt4 :TextView
+
 
 
 
@@ -73,6 +73,7 @@ class MainActivity : AppCompatActivity() {
         val savedNet = savedValues.getString("homeNet","theflat") ?: ""
         val savedIP = savedValues.getString("targetIP","0.0.0.0") ?: "0.0.0.0"
 
+        val vibrator = applicationContext.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
 
         startBtn = findViewById(R.id.startBtn) as Button
         startBtn.text = getString(R.string.Noconnection )
@@ -84,16 +85,20 @@ class MainActivity : AppCompatActivity() {
         txt3 = findViewById(R.id.txt3) as TextView
         txt4 = findViewById(R.id.txt4) as TextView
 
-       // val handler = android.os.Handler() // Handler вроде depricated
-
-       // wifiTimerTask = WifiTimerTask(this.applicationContext).also { it.handler=handler }
-
-        //wifiTimerTask.stringOverUdp( "IsSomeBodyHere", getBroadcastAddress()  )
-
         txt1.text = "--------"
 
         // запускаем мониторинг сети
-        // handler.post(wifiTimerTask)
+        var timer = object :CountDownTimer(2000){
+            override fun onTick( millisUntilFinished: Long){
+                TODO("Not yet implemented")
+            }
+
+            override fun onFinish() {
+                TODO("Not yet implemented")
+            }
+        }.start()
+
+
         val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
         var  wifiInfo = wifiManager.connectionInfo as WifiInfo
         var ssid = wifiInfo.ssid.replace("\"", "")
@@ -156,7 +161,7 @@ class MainActivity : AppCompatActivity() {
                 startBtn.isEnabled = false
                 startBtn.setBackgroundColor(Color.GRAY)
             }
-            if (canVibrate) {
+            if ( vibrator.hasVibrator() ) {
                 // var vibrationEffect=VibrationEffect.createOneShot(milliseconds,255)
                 // vibrator.vibrate(vibrationEffect)
                 vibrator.vibrate(milliseconds)
